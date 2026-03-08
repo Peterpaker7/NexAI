@@ -60,50 +60,47 @@ function ClinicianDashboard() {
   };
 
   // Auto-refresh every 30 seconds
-  useEffect(() => {
-    const fetchAllPatients = async () => {
-      setLoading(true);
-      const updatedPatients = [];
+useEffect(() => {
 
-      for (const [, patient] of Object.entries(patientData)) {
-        try {
-          const response = await fetch(`${API_URL}/predict`, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(patient.vitals)
-          });
+  const fetchAllPatients = async () => {
+    setLoading(true);
+    const updatedPatients = [];
 
-          if (response.ok) {
-            const prediction = await response.json();
-            updatedPatients.push({
-              ...patient,
-              prediction: prediction,
-              lastUpdate: new Date().toLocaleTimeString()
-            });
-          }
-        } catch (error) {
-          console.error(`Error fetching ${patient.name}:`, error);
-        }
-      }
-
-      setPatients(updatedPatients);
-      setLoading(false);
-    };
-
-     const fetchAllPatients = async () => {
+    for (const [, patient] of Object.entries(patientData)) {
       try {
-        const response = await fetch("https://projects-11-mb9v.onrender.com/patients");
-        const data = await response.json();
-        console.log(data);
+        const response = await fetch(`${API_URL}/predict`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(patient.vitals),
+        });
+
+        if (response.ok) {
+          const prediction = await response.json();
+
+          updatedPatients.push({
+            ...patient,
+            prediction: prediction,
+            lastUpdate: new Date().toLocaleTimeString(),
+          });
+        }
       } catch (error) {
-        console.error("Error fetching patients:", error);
+        console.error(`Error fetching ${patient.name}:`, error);
       }
-    };
-    useEffect(() => {
-      fetchAllPatients();
-    }, []);
+    }
+
+    setPatients(updatedPatients);
+    setLoading(false);
+  };
+
+  fetchAllPatients();
+
+  const interval = setInterval(fetchAllPatients, 30000);
+
+  return () => clearInterval(interval);
+
+}, []);
 
   // Handle Call Patient
   const handleCall = (patient) => {
