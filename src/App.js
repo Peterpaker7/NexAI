@@ -33,7 +33,7 @@ function App() {
     setPrediction(null);
 
     try {
-      const response = await fetch('http://localhost:5000/predict', {
+      const response = await fetch('https://projects-10-mb9v.onrender.com/predict', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -76,7 +76,7 @@ function App() {
     setSosLoading(true);
 
     try {
-      const response = await fetch('http://localhost:5000/sos/kavitha', {
+      const response = await fetch('https://projects-10-mb9v.onrender.com/sos', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
