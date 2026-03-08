@@ -92,11 +92,18 @@ function ClinicianDashboard() {
       setLoading(false);
     };
 
-    fetchAllPatients();
-    const interval = setInterval(fetchAllPatients, 30000);
-    return () => clearInterval(interval);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+     const fetchAllPatients = async () => {
+      try {
+        const response = await fetch("https://projects-11-mb9v.onrender.com/patients");
+        const data = await response.json();
+        console.log(data);
+      } catch (error) {
+        console.error("Error fetching patients:", error);
+      }
+    };
+    useEffect(() => {
+      fetchAllPatients();
+    }, []);
 
   // Handle Call Patient
   const handleCall = (patient) => {
