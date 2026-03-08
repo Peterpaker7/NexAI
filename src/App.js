@@ -1,356 +1,370 @@
-import React, { useState, useEffect } from 'react';
-import './ClinicianDashboard.css';
+import React, { useState } from 'react';
+import './App.css';
 
-function ClinicianDashboard() {
-  const [patients, setPatients] = useState([
-    {
-      id: 1,
-      name: "Kavitha",
-      age: 26,
-      weeks: 30,
-      lastReading: null,
-      riskLevel: "Loading...",
-      vitals: {
-        SystolicBP: 145,
-        DiastolicBP: 92,
-        BS: 7.0,
-        BodyTemp: 98.0,
-        HeartRate: 80
-      }
-    },
-    {
-      id: 2,
-      name: "Jaya Keerthana",
-      age: 27,
-      weeks: 24,
-      lastReading: null,
-      riskLevel: "Loading...",
-      vitals: {
-        SystolicBP: 120,
-        DiastolicBP: 80,
-        BS: 6.0,
-        BodyTemp: 98.6,
-        HeartRate: 75
-      }
-    },
-    {
-      id: 3,
-      name: "Lakshmi",
-      age: 35,
-      weeks: 28,
-      lastReading: null,
-      riskLevel: "Loading...",
-      vitals: {
-        SystolicBP: 135,
-        DiastolicBP: 88,
-        BS: 8.5,
-        BodyTemp: 98.2,
-        HeartRate: 88
-      }
-    }
-  ]);
+function App() {
+  // State management
+  const [formData, setFormData] = useState({
+    Age: '',
+    SystolicBP: '',
+    DiastolicBP: '',
+    BS: '',
+    BodyTemp: '',
+    HeartRate: ''
+  });
 
-  const [selectedPatient, setSelectedPatient] = useState(null);
+  const [prediction, setPrediction] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [sosLoading, setSosLoading] = useState(false);
 
-  // Fetch prediction for a patient
-  const fetchPrediction = async (patient) => {
+  // Handle input changes
+  const handleChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: parseFloat(e.target.value) || ''
+    });
+  };
+
+  // Handle form submit
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError(null);
+    setPrediction(null);
+
     try {
       const response = await fetch('http://localhost:5000/predict', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          Age: patient.age,
-          ...patient.vitals
-        })
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData)
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        return data;
+      if (!response.ok) {
+        throw new Error('API request failed');
       }
-    } catch (error) {
-      console.error('Error fetching prediction:', error);
+
+      const data = await response.json();
+      setPrediction(data);
+    } catch (err) {
+      setError('Failed to get prediction. Make sure Flask API is running on port 5000.');
+      console.error(err);
+    } finally {
+      setLoading(false);
     }
-    return null;
   };
 
-  // Refresh all patient data
-  const refreshAllPatients = async () => {
-    setLoading(true);
-    const updatedPatients = await Promise.all(
-      patients.map(async (patient) => {
-        const prediction = await fetchPrediction(patient);
-        return {
-          ...patient,
-          lastReading: new Date().toLocaleTimeString(),
-          riskLevel: prediction ? prediction.risk_level : 'Unknown',
-          prediction: prediction
-        };
-      })
-    );
-    setPatients(updatedPatients);
-    setLoading(false);
+  // Load Kavitha's test scenario
+  const loadKavithaScenario = () => {
+    setFormData({
+      Age: 26,
+      SystolicBP: 145,
+      DiastolicBP: 92,
+      BS: 7.0,
+      BodyTemp: 98.0,
+      HeartRate: 80
+    });
   };
 
-  // Auto-refresh every 30 seconds
-  useEffect(() => {
-    refreshAllPatients();
-    const interval = setInterval(refreshAllPatients, 30000);
-    return () => clearInterval(interval);
-  }, []);
+  // Handle SOS button
+  const handleSOS = async () => {
+    if (!window.confirm('🆘 Are you sure you want to send EMERGENCY SOS alert?')) {
+      return;
+    }
 
+    setSosLoading(true);
+
+    try {
+      const response = await fetch('http://localhost:5000/sos/kavitha', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+
+      const data = await response.json();
+
+      // Check if it actually worked (even if status isn't 200)
+      if (response.ok || data.success || data.notifications_sent) {
+        alert('🆘 SOS ALERT SENT SUCCESSFULLY!\n\n✓ Family notified via SMS\n✓ Doctor notified via SMS\n✓ Doctor notified via Email\n\nEmergency response activated!');
+      } else {
+        alert('SOS request sent.\n\nNote: Check your phone - SMS may have been delivered even if this shows an error.');
+      }
+
+    } finally {
+      setSosLoading(false);
+    }
+  };
+
+  // Get risk color
   const getRiskColor = (risk) => {
     if (risk === 'high risk') return '#e53e3e';
     if (risk === 'mid risk') return '#dd6b20';
-    if (risk === 'low risk') return '#38a169';
-    return '#6e7681';
-  };
-
-  const getRiskIcon = (risk) => {
-    if (risk === 'high risk') return '🔴';
-    if (risk === 'mid risk') return '🟡';
-    if (risk === 'low risk') return '🟢';
-    return '⚪';
+    return '#38a169';
   };
 
   return (
-    <div className="clinician-app">
-      {/* Header */}
-      <header className="clinician-header">
+    <div className="app">
+      <header className="header">
         <div className="header-content">
           <h1 className="logo">
-            Nex<span style={{ color: '#e53e3e' }}>AI</span> <span className="subtitle">Clinician Portal</span>
+            Nex<span style={{ color: '#e53e3e' }}>AI</span>
           </h1>
-          <div className="header-actions">
-            <button
-              className="refresh-btn"
-              onClick={refreshAllPatients}
-              disabled={loading}
-            >
-              {loading ? '🔄 Refreshing...' : '🔄 Refresh All'}
-            </button>
-          </div>
+          <p className="tagline">Pregnancy Monitoring & Risk Alert System</p>
         </div>
       </header>
 
-      <div className="clinician-container">
-        {/* Left Panel - Patient List */}
-        <div className="patient-list-panel">
-          <h2>Active Patients ({patients.length})</h2>
+      <div className="container">
+        <div className="main-grid">
 
-          <div className="patient-list">
-            {patients.map((patient) => (
-              <div
-                key={patient.id}
-                className={`patient-card ${selectedPatient?.id === patient.id ? 'selected' : ''}`}
-                onClick={() => setSelectedPatient(patient)}
-                style={{ borderLeftColor: getRiskColor(patient.riskLevel) }}
+          <div className="card form-card">
+            <div className="card-header">
+              <h2>Patient Vitals Input</h2>
+              <button
+                className="demo-btn"
+                onClick={loadKavithaScenario}
+                type="button"
               >
-                <div className="patient-header">
-                  <div className="patient-name">
-                    {getRiskIcon(patient.riskLevel)} {patient.name}
-                  </div>
-                  <div
-                    className="risk-badge-small"
-                    style={{ backgroundColor: getRiskColor(patient.riskLevel) }}
-                  >
-                    {patient.riskLevel === 'high risk' ? 'HIGH' :
-                      patient.riskLevel === 'mid risk' ? 'MID' :
-                        patient.riskLevel === 'low risk' ? 'LOW' : '---'}
-                  </div>
-                </div>
-
-                <div className="patient-info">
-                  <span>Age: {patient.age} | {patient.weeks} weeks</span>
-                </div>
-
-                <div className="patient-vitals-quick">
-                  <span>BP: {patient.vitals.SystolicBP}/{patient.vitals.DiastolicBP}</span>
-                  <span>HR: {patient.vitals.HeartRate}</span>
-                  <span>BS: {patient.vitals.BS}</span>
-                </div>
-
-                {patient.lastReading && (
-                  <div className="last-reading">
-                    Last: {patient.lastReading}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Right Panel - Patient Details */}
-        <div className="patient-detail-panel">
-          {!selectedPatient ? (
-            <div className="no-selection">
-              <div className="empty-icon">👈</div>
-              <p>Select a patient from the list to view details</p>
+                📋 Load Demo Data
+              </button>
             </div>
-          ) : (
-            <div className="patient-details">
-              {/* Patient Header */}
-              <div className="detail-header">
-                <div>
-                  <h2>{selectedPatient.name}</h2>
-                  <p className="patient-meta">
-                    {selectedPatient.age} years old • {selectedPatient.weeks} weeks pregnant
-                  </p>
+
+            <form onSubmit={handleSubmit}>
+              <div className="form-grid">
+
+                <div className="form-group">
+                  <label>Age (years)</label>
+                  <input
+                    type="number"
+                    name="Age"
+                    value={formData.Age}
+                    onChange={handleChange}
+                    placeholder="e.g., 26"
+                    required
+                    min="15"
+                    max="50"
+                  />
                 </div>
+
+                <div className="form-group">
+                  <label>Systolic BP (mmHg)</label>
+                  <input
+                    type="number"
+                    name="SystolicBP"
+                    value={formData.SystolicBP}
+                    onChange={handleChange}
+                    placeholder="e.g., 120"
+                    required
+                    min="70"
+                    max="200"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Diastolic BP (mmHg)</label>
+                  <input
+                    type="number"
+                    name="DiastolicBP"
+                    value={formData.DiastolicBP}
+                    onChange={handleChange}
+                    placeholder="e.g., 80"
+                    required
+                    min="40"
+                    max="130"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Blood Sugar (mmol/L)</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    name="BS"
+                    value={formData.BS}
+                    onChange={handleChange}
+                    placeholder="e.g., 7.0"
+                    required
+                    min="3"
+                    max="20"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Body Temperature (°F)</label>
+                  <input
+                    type="number"
+                    step="0.1"
+                    name="BodyTemp"
+                    value={formData.BodyTemp}
+                    onChange={handleChange}
+                    placeholder="e.g., 98.6"
+                    required
+                    min="95"
+                    max="105"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label>Heart Rate (bpm)</label>
+                  <input
+                    type="number"
+                    name="HeartRate"
+                    value={formData.HeartRate}
+                    onChange={handleChange}
+                    placeholder="e.g., 75"
+                    required
+                    min="50"
+                    max="150"
+                  />
+                </div>
+
+              </div>
+
+              <button
+                type="submit"
+                className="submit-btn"
+                disabled={loading}
+              >
+                {loading ? '🔄 Analyzing...' : '🔬 Analyze Risk'}
+              </button>
+            </form>
+
+            {error && (
+              <div className="error-box">
+                <strong>❌ Error:</strong> {error}
+              </div>
+            )}
+          </div>
+
+          <div className="card results-card">
+            <h2>Risk Analysis Results</h2>
+
+            {!prediction && !loading && (
+              <div className="empty-state">
+                <div className="empty-icon">📊</div>
+                <p>Enter patient vitals and click "Analyze Risk" to see prediction</p>
+              </div>
+            )}
+
+            {loading && (
+              <div className="loading-state">
+                <div className="spinner"></div>
+                <p>Analyzing patient data...</p>
+              </div>
+            )}
+
+            {prediction && (
+              <div className="results">
+
                 <div
-                  className="risk-badge-large"
+                  className="risk-badge"
                   style={{
-                    backgroundColor: getRiskColor(selectedPatient.riskLevel) + '20',
-                    borderColor: getRiskColor(selectedPatient.riskLevel),
-                    color: getRiskColor(selectedPatient.riskLevel)
+                    backgroundColor: getRiskColor(prediction.risk_level) + '20',
+                    borderColor: getRiskColor(prediction.risk_level)
                   }}
                 >
-                  {selectedPatient.riskLevel.toUpperCase()}
-                </div>
-              </div>
-
-              {/* Current Vitals */}
-              <div className="vitals-section">
-                <h3>Current Vitals</h3>
-                <div className="vitals-grid">
-                  <div className="vital-card">
-                    <div className="vital-label">Blood Pressure</div>
-                    <div className="vital-value">
-                      {selectedPatient.vitals.SystolicBP}/{selectedPatient.vitals.DiastolicBP}
-                      <span className="vital-unit">mmHg</span>
-                    </div>
-                  </div>
-                  <div className="vital-card">
-                    <div className="vital-label">Heart Rate</div>
-                    <div className="vital-value">
-                      {selectedPatient.vitals.HeartRate}
-                      <span className="vital-unit">bpm</span>
-                    </div>
-                  </div>
-                  <div className="vital-card">
-                    <div className="vital-label">Blood Sugar</div>
-                    <div className="vital-value">
-                      {selectedPatient.vitals.BS}
-                      <span className="vital-unit">mmol/L</span>
-                    </div>
-                  </div>
-                  <div className="vital-card">
-                    <div className="vital-label">Temperature</div>
-                    <div className="vital-value">
-                      {selectedPatient.vitals.BodyTemp}
-                      <span className="vital-unit">°F</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* AI Analysis */}
-              {selectedPatient.prediction && (
-                <>
-                  {/* Risk Probabilities */}
-                  <div className="analysis-section">
-                    <h3>Risk Assessment</h3>
-                    <div className="prob-bars-clinician">
-                      <div className="prob-item">
-                        <span className="prob-label">High Risk</span>
-                        <div className="prob-track">
-                          <div
-                            className="prob-fill high"
-                            style={{ width: `${selectedPatient.prediction.probabilities.high_risk}%` }}
-                          ></div>
-                        </div>
-                        <span className="prob-value">{selectedPatient.prediction.probabilities.high_risk}%</span>
-                      </div>
-                      <div className="prob-item">
-                        <span className="prob-label">Mid Risk</span>
-                        <div className="prob-track">
-                          <div
-                            className="prob-fill mid"
-                            style={{ width: `${selectedPatient.prediction.probabilities.mid_risk}%` }}
-                          ></div>
-                        </div>
-                        <span className="prob-value">{selectedPatient.prediction.probabilities.mid_risk}%</span>
-                      </div>
-                      <div className="prob-item">
-                        <span className="prob-label">Low Risk</span>
-                        <div className="prob-track">
-                          <div
-                            className="prob-fill low"
-                            style={{ width: `${selectedPatient.prediction.probabilities.low_risk}%` }}
-                          ></div>
-                        </div>
-                        <span className="prob-value">{selectedPatient.prediction.probabilities.low_risk}%</span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Detected Conditions */}
-                  {selectedPatient.prediction.subtags && selectedPatient.prediction.subtags.length > 0 && (
-                    <div className="conditions-section">
-                      <h3>⚠️ Detected Conditions</h3>
-                      <div className="condition-tags">
-                        {selectedPatient.prediction.subtags.map((tag, idx) => (
-                          <span key={idx} className="condition-tag">{tag}</span>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* SHAP Explainability */}
-                  {selectedPatient.prediction.shap_explanation && selectedPatient.prediction.shap_explanation.length > 0 && (
-                    <div className="shap-section">
-                      <h3>🧠 AI Explainability (SHAP)</h3>
-                      <p className="shap-description">Top contributing factors to this prediction:</p>
-                      <div className="shap-bars">
-                        {selectedPatient.prediction.shap_explanation.map((item, idx) => (
-                          <div key={idx} className="shap-item">
-                            <div className="shap-label">{item.feature}</div>
-                            <div className="shap-track">
-                              <div
-                                className="shap-fill"
-                                style={{ width: `${item.contribution}%` }}
-                              ></div>
-                            </div>
-                            <div className="shap-value">{item.contribution}%</div>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Clinical Recommendation */}
                   <div
-                    className="recommendation-box"
-                    style={{
-                      backgroundColor: getRiskColor(selectedPatient.riskLevel) + '15',
-                      borderLeftColor: getRiskColor(selectedPatient.riskLevel)
-                    }}
+                    className="risk-level"
+                    style={{ color: getRiskColor(prediction.risk_level) }}
                   >
-                    <strong>📋 Clinical Recommendation:</strong>
-                    <p>{selectedPatient.prediction.recommendation}</p>
+                    {prediction.risk_level.toUpperCase()}
                   </div>
-                </>
-              )}
+                  <div className="confidence">
+                    Confidence: {prediction.confidence}%
+                  </div>
+                </div>
 
-              {/* Action Buttons */}
-              <div className="action-buttons">
-                <button className="action-btn primary">
-                  📞 Call Patient
-                </button>
-                <button className="action-btn secondary">
-                  📧 Send Alert
-                </button>
-                <button className="action-btn secondary">
-                  📋 View History
-                </button>
+                <div className="probabilities">
+                  <h3>Risk Probabilities</h3>
+
+                  <div className="prob-bar">
+                    <div className="prob-label">High Risk</div>
+                    <div className="prob-track">
+                      <div className="prob-fill high" style={{ width: `${prediction.probabilities.high_risk}%` }}></div>
+                    </div>
+                    <div className="prob-value">{prediction.probabilities.high_risk}%</div>
+                  </div>
+
+                  <div className="prob-bar">
+                    <div className="prob-label">Mid Risk</div>
+                    <div className="prob-track">
+                      <div className="prob-fill mid" style={{ width: `${prediction.probabilities.mid_risk}%` }}></div>
+                    </div>
+                    <div className="prob-value">{prediction.probabilities.mid_risk}%</div>
+                  </div>
+
+                  <div className="prob-bar">
+                    <div className="prob-label">Low Risk</div>
+                    <div className="prob-track">
+                      <div className="prob-fill low" style={{ width: `${prediction.probabilities.low_risk}%` }}></div>
+                    </div>
+                    <div className="prob-value">{prediction.probabilities.low_risk}%</div>
+                  </div>
+
+                </div>
+
+                {prediction.subtags && prediction.subtags.length > 0 && (
+                  <div className="subtags">
+                    <h3>Detected Conditions</h3>
+                    <div className="tag-list">
+                      {prediction.subtags.map((tag, idx) => (
+                        <span key={idx} className="tag">{tag}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {prediction.shap_explanation && prediction.shap_explanation.length > 0 && (
+                  <div className="shap-section">
+                    <h3>Why This Prediction? (AI Explainability)</h3>
+                    <div className="shap-bars">
+                      {prediction.shap_explanation.map((item, idx) => (
+                        <div key={idx} className="shap-item">
+                          <div className="shap-label">{item.feature}</div>
+                          <div className="shap-track">
+                            <div className="shap-fill" style={{ width: `${item.contribution}%` }}></div>
+                          </div>
+                          <div className="shap-value">{item.contribution}%</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div
+                  className="recommendation"
+                  style={{
+                    backgroundColor: getRiskColor(prediction.risk_level) + '15',
+                    borderLeftColor: getRiskColor(prediction.risk_level)
+                  }}
+                >
+                  <strong>Recommendation:</strong>
+                  <p>{prediction.recommendation}</p>
+                </div>
+
+                {prediction.risk_level === 'high risk' && (
+                  <button
+                    className="sos-btn"
+                    onClick={handleSOS}
+                    disabled={sosLoading}
+                  >
+                    {sosLoading ? '🔄 Sending SOS...' : '🆘 PRESS SOS - EMERGENCY ALERT'}
+                  </button>
+                )}
+
               </div>
-            </div>
-          )}
+            )}
+          </div>
+
         </div>
       </div>
+
+      <footer className="footer">
+        <p>NexAI © 2026 | MedNexus Hackathon | Team: MUKESH K A, NITHISH K, SREYA S, ROKITH K, NAVANEETH VIKAS</p>
+      </footer>
     </div>
   );
 }
 
-export default ClinicianDashboard;
+export default App;
