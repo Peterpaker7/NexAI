@@ -56,7 +56,7 @@ function ClinicianDashboard() {
   // Fetch prediction for a patient
   const fetchPrediction = async (patient) => {
     try {
-      const response = await fetch('http://localhost:5000/predict', {
+      const response = await fetch('https://projects-10-mb9v.onrender.com/predict', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
