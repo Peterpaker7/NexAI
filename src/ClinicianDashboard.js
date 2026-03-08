@@ -8,7 +8,7 @@ function ClinicianDashboard() {
   const [alertLoading, setAlertLoading] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
 
-  const API_URL = 'http://localhost:5000';
+  const API_URL = 'https://projects-10-mb9v.onrender.com';
 
   // Patient data with phone numbers
   const patientData = {
