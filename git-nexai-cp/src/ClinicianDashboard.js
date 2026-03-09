@@ -1,4 +1,4 @@
-import React, { useState, useEffect,useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import './ClinicianDashboard.css';
 
 function ClinicianDashboard() {
@@ -60,44 +60,44 @@ function ClinicianDashboard() {
   };
 
   // Fetch predictions for all patients
-  const fetchAllPatients = async () => {
-    setLoading(true);
-    const updatedPatients = [];
+const fetchAllPatients = async () => {
+  setLoading(true);
+  const updatedPatients = [];
 
-    for (const patient of Object.values(patientData)) {
-      try {
-        const response = await fetch(`${API_URL}/predict`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(patient.vitals)
+  for (const patient of Object.values(patientData)) {
+    try {
+      const response = await fetch(`${API_URL}/predict`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(patient.vitals)
+      });
+
+      if (response.ok) {
+        const prediction = await response.json();
+        updatedPatients.push({
+          ...patient,
+          prediction: prediction,
+          lastUpdate: new Date().toLocaleTimeString()
         });
-
-        if (response.ok) {
-          const prediction = await response.json();
-          updatedPatients.push({
-            ...patient,
-            prediction: prediction,
-            lastUpdate: new Date().toLocaleTimeString()
-          });
-        }
-      } catch (error) {
-        console.error(`Error fetching ${patient.name}:`, error);
       }
+    } catch (error) {
+      console.error(`Error fetching ${patient.name}:`, error);
     }
+  }
 
-    setPatients(updatedPatients);
-    setLoading(false);
-  }, []);
+  setPatients(updatedPatients);
+  setLoading(false);
+};
 
-  // Auto-refresh every 30 seconds
-  useEffect(() => {
-    fetchAllPatients();
-    const interval = setInterval(fetchAllPatients, 30000);
-    return () => clearInterval(interval);
-  }, [fetchAllPatients]);
-
+// Auto-refresh every 30 seconds
+// eslint-disable-next-line react-hooks/exhaustive-deps
+useEffect(() => {
+  fetchAllPatients();
+  const interval = setInterval(fetchAllPatients, 30000);
+  return () => clearInterval(interval);
+}, []);
   // Handle Call Patient
   const handleCall = (patient) => {
     // Open phone dialer
