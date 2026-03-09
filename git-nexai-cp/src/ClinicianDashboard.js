@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect,useCallback } from 'react';
 import './ClinicianDashboard.css';
 
 function ClinicianDashboard() {
@@ -64,7 +64,7 @@ function ClinicianDashboard() {
     setLoading(true);
     const updatedPatients = [];
 
-    for (const [id, patient] of Object.entries(patientData)) {
+    for (const patient of Object.values(patientData)) {
       try {
         const response = await fetch(`${API_URL}/predict`, {
           method: 'POST',
@@ -89,14 +89,14 @@ function ClinicianDashboard() {
 
     setPatients(updatedPatients);
     setLoading(false);
-  };
+  },[]);
 
   // Auto-refresh every 30 seconds
   useEffect(() => {
     fetchAllPatients();
     const interval = setInterval(fetchAllPatients, 30000);
     return () => clearInterval(interval);
-  }, []);
+  }, [fetchAllPatients]);
 
   // Handle Call Patient
   const handleCall = (patient) => {
