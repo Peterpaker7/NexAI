@@ -8,9 +8,8 @@ function ClinicianDashboard() {
   const [alertLoading, setAlertLoading] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
 
-  const API_URL = 'http://localhost:5000';
+  const API_URL = 'https://projects-10-mb9v.onrender.com';
 
-  // Patient data with phone numbers
   const patientData = {
     kavitha: {
       id: 'kavitha',
@@ -59,52 +58,74 @@ function ClinicianDashboard() {
     }
   };
 
-  // Fetch predictions for all patients
-const fetchAllPatients = async () => {
-  setLoading(true);
-  const updatedPatients = [];
+  useEffect(() => {
+    async function loadPatients() {
+      setLoading(true);
+      const updatedPatients = [];
 
-  for (const patient of Object.values(patientData)) {
-    try {
-      const response = await fetch(`${API_URL}/predict`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(patient.vitals)
-      });
+      for (const patient of Object.values(patientData)) {
+        try {
+          const response = await fetch(`${API_URL}/predict`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(patient.vitals)
+          });
 
-      if (response.ok) {
-        const prediction = await response.json();
-        updatedPatients.push({
-          ...patient,
-          prediction: prediction,
-          lastUpdate: new Date().toLocaleTimeString()
-        });
+          if (response.ok) {
+            const prediction = await response.json();
+            updatedPatients.push({
+              ...patient,
+              prediction: prediction,
+              lastUpdate: new Date().toLocaleTimeString()
+            });
+          }
+        } catch (error) {
+          console.error(`Error fetching ${patient.name}:`, error);
+        }
       }
-    } catch (error) {
-      console.error(`Error fetching ${patient.name}:`, error);
+
+      setPatients(updatedPatients);
+      setLoading(false);
     }
-  }
 
-  setPatients(updatedPatients);
-  setLoading(false);
-};
+    loadPatients();
+    const interval = setInterval(loadPatients, 30000);
+    return () => clearInterval(interval);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-// Auto-refresh every 30 seconds
-// eslint-disable-next-line react-hooks/exhaustive-deps
-useEffect(() => {
-  fetchAllPatients();
-  const interval = setInterval(fetchAllPatients, 30000);
-  return () => clearInterval(interval);
-}, []);
-  // Handle Call Patient
+  const handleRefresh = async () => {
+    setLoading(true);
+    const updatedPatients = [];
+
+    for (const patient of Object.values(patientData)) {
+      try {
+        const response = await fetch(`${API_URL}/predict`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(patient.vitals)
+        });
+
+        if (response.ok) {
+          const prediction = await response.json();
+          updatedPatients.push({
+            ...patient,
+            prediction: prediction,
+            lastUpdate: new Date().toLocaleTimeString()
+          });
+        }
+      } catch (error) {
+        console.error(`Error fetching ${patient.name}:`, error);
+      }
+    }
+
+    setPatients(updatedPatients);
+    setLoading(false);
+  };
+
   const handleCall = (patient) => {
-    // Open phone dialer
     window.location.href = `tel:${patient.phone}`;
   };
 
-  // Handle Send Alert
   const handleSendAlert = async (patient) => {
     if (!window.confirm(`Send alert to ${patient.name}?\n\nThis will send SMS and email notification.`)) {
       return;
@@ -113,12 +134,9 @@ useEffect(() => {
     setAlertLoading(true);
 
     try {
-      // Send alert via API
       const response = await fetch(`${API_URL}/send-alert/${patient.id}`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           message: 'Please check in with your doctor. Your recent vitals require attention.',
           urgent: patient.prediction?.risk_level === 'high risk'
@@ -138,20 +156,17 @@ useEffect(() => {
     }
   };
 
-  // Handle View History
   const handleViewHistory = (patient) => {
     setSelectedPatient(patient);
     setShowHistory(true);
   };
 
-  // Get risk color
   const getRiskColor = (risk) => {
     if (risk === 'high risk') return '#e53e3e';
     if (risk === 'mid risk') return '#dd6b20';
     return '#38a169';
   };
 
-  // Get risk badge
   const getRiskBadge = (risk) => {
     if (risk === 'high risk') return { icon: '🔴', text: 'HIGH RISK' };
     if (risk === 'mid risk') return { icon: '🟡', text: 'MID RISK' };
@@ -160,7 +175,6 @@ useEffect(() => {
 
   return (
     <div className="clinician-dashboard">
-      {/* Header */}
       <header className="dashboard-header">
         <div className="header-content">
           <h1 className="logo">
@@ -169,9 +183,9 @@ useEffect(() => {
           <p className="subtitle">Clinician Dashboard - Patient Monitoring</p>
         </div>
         <div className="header-actions">
-          <button 
+          <button
             className="refresh-btn"
-            onClick={fetchAllPatients}
+            onClick={handleRefresh}
             disabled={loading}
           >
             {loading ? '🔄 Refreshing...' : '🔄 Refresh All'}
@@ -179,7 +193,6 @@ useEffect(() => {
         </div>
       </header>
 
-      {/* Patient Grid */}
       <div className="patient-grid">
         {patients.length === 0 && !loading && (
           <div className="empty-state">
@@ -192,20 +205,19 @@ useEffect(() => {
           const riskColor = getRiskColor(patient.prediction?.risk_level);
 
           return (
-            <div 
+            <div
               key={patient.id}
               className="patient-card"
               style={{ borderColor: riskColor }}
             >
-              {/* Patient Header */}
               <div className="patient-header">
                 <div className="patient-info">
                   <h3>{patient.name}</h3>
                   <p className="patient-meta">Age: {patient.age} | ID: {patient.id}</p>
                 </div>
-                <div 
+                <div
                   className="risk-badge"
-                  style={{ 
+                  style={{
                     backgroundColor: riskColor + '20',
                     color: riskColor,
                     borderColor: riskColor
@@ -216,13 +228,10 @@ useEffect(() => {
                 </div>
               </div>
 
-              {/* Vitals Summary */}
               <div className="vitals-summary">
                 <div className="vital-item">
                   <span className="vital-label">BP:</span>
-                  <span className="vital-value">
-                    {patient.vitals.SystolicBP}/{patient.vitals.DiastolicBP}
-                  </span>
+                  <span className="vital-value">{patient.vitals.SystolicBP}/{patient.vitals.DiastolicBP}</span>
                 </div>
                 <div className="vital-item">
                   <span className="vital-label">BS:</span>
@@ -238,16 +247,15 @@ useEffect(() => {
                 </div>
               </div>
 
-              {/* Confidence */}
               {patient.prediction && (
                 <div className="confidence-bar">
                   <div className="confidence-label">
                     Confidence: {patient.prediction.confidence}%
                   </div>
                   <div className="confidence-track">
-                    <div 
+                    <div
                       className="confidence-fill"
-                      style={{ 
+                      style={{
                         width: `${patient.prediction.confidence}%`,
                         backgroundColor: riskColor
                       }}
@@ -256,7 +264,6 @@ useEffect(() => {
                 </div>
               )}
 
-              {/* Detected Conditions */}
               {patient.prediction?.subtags && patient.prediction.subtags.length > 0 && (
                 <div className="conditions">
                   {patient.prediction.subtags.map((tag, idx) => (
@@ -267,7 +274,6 @@ useEffect(() => {
                 </div>
               )}
 
-              {/* SHAP Explanation */}
               {patient.prediction?.shap_explanation && patient.prediction.shap_explanation.length > 0 && (
                 <div className="shap-mini">
                   <h4>Key Risk Factors:</h4>
@@ -276,9 +282,9 @@ useEffect(() => {
                       <div key={idx} className="shap-item-mini">
                         <span className="shap-feature">{item.feature}</span>
                         <div className="shap-bar-container">
-                          <div 
+                          <div
                             className="shap-bar"
-                            style={{ 
+                            style={{
                               width: `${item.contribution}%`,
                               backgroundColor: riskColor
                             }}
@@ -291,23 +297,22 @@ useEffect(() => {
                 </div>
               )}
 
-              {/* Action Buttons */}
               <div className="action-buttons">
-                <button 
+                <button
                   className="action-btn call-btn"
                   onClick={() => handleCall(patient)}
                   title={`Call ${patient.name} at ${patient.phone}`}
                 >
                   📞 Call Patient
                 </button>
-                <button 
+                <button
                   className="action-btn alert-btn"
                   onClick={() => handleSendAlert(patient)}
                   disabled={alertLoading}
                 >
                   {alertLoading ? '⏳ Sending...' : '📨 Send Alert'}
                 </button>
-                <button 
+                <button
                   className="action-btn history-btn"
                   onClick={() => handleViewHistory(patient)}
                 >
@@ -315,7 +320,6 @@ useEffect(() => {
                 </button>
               </div>
 
-              {/* Last Update */}
               <div className="last-update">
                 Last updated: {patient.lastUpdate}
               </div>
@@ -324,40 +328,22 @@ useEffect(() => {
         })}
       </div>
 
-      {/* History Modal */}
       {showHistory && selectedPatient && (
         <div className="modal-overlay" onClick={() => setShowHistory(false)}>
           <div className="modal-content" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2>📋 Medical History - {selectedPatient.name}</h2>
-              <button 
-                className="close-btn"
-                onClick={() => setShowHistory(false)}
-              >
-                ✕
-              </button>
+              <button className="close-btn" onClick={() => setShowHistory(false)}>✕</button>
             </div>
             <div className="modal-body">
               <div className="history-section">
                 <h3>Patient Information</h3>
                 <table className="info-table">
                   <tbody>
-                    <tr>
-                      <td><strong>Name:</strong></td>
-                      <td>{selectedPatient.name}</td>
-                    </tr>
-                    <tr>
-                      <td><strong>Age:</strong></td>
-                      <td>{selectedPatient.age} years</td>
-                    </tr>
-                    <tr>
-                      <td><strong>Phone:</strong></td>
-                      <td>{selectedPatient.phone}</td>
-                    </tr>
-                    <tr>
-                      <td><strong>Email:</strong></td>
-                      <td>{selectedPatient.email}</td>
-                    </tr>
+                    <tr><td><strong>Name:</strong></td><td>{selectedPatient.name}</td></tr>
+                    <tr><td><strong>Age:</strong></td><td>{selectedPatient.age} years</td></tr>
+                    <tr><td><strong>Phone:</strong></td><td>{selectedPatient.phone}</td></tr>
+                    <tr><td><strong>Email:</strong></td><td>{selectedPatient.email}</td></tr>
                   </tbody>
                 </table>
               </div>
@@ -366,22 +352,10 @@ useEffect(() => {
                 <h3>Current Vitals</h3>
                 <table className="vitals-table">
                   <tbody>
-                    <tr>
-                      <td>Blood Pressure:</td>
-                      <td>{selectedPatient.vitals.SystolicBP}/{selectedPatient.vitals.DiastolicBP} mmHg</td>
-                    </tr>
-                    <tr>
-                      <td>Blood Sugar:</td>
-                      <td>{selectedPatient.vitals.BS} mmol/L</td>
-                    </tr>
-                    <tr>
-                      <td>Heart Rate:</td>
-                      <td>{selectedPatient.vitals.HeartRate} bpm</td>
-                    </tr>
-                    <tr>
-                      <td>Body Temperature:</td>
-                      <td>{selectedPatient.vitals.BodyTemp}°F</td>
-                    </tr>
+                    <tr><td>Blood Pressure:</td><td>{selectedPatient.vitals.SystolicBP}/{selectedPatient.vitals.DiastolicBP} mmHg</td></tr>
+                    <tr><td>Blood Sugar:</td><td>{selectedPatient.vitals.BS} mmol/L</td></tr>
+                    <tr><td>Heart Rate:</td><td>{selectedPatient.vitals.HeartRate} bpm</td></tr>
+                    <tr><td>Body Temperature:</td><td>{selectedPatient.vitals.BodyTemp}°F</td></tr>
                   </tbody>
                 </table>
               </div>
@@ -415,3 +389,5 @@ useEffect(() => {
 }
 
 export default ClinicianDashboard;
+
+
