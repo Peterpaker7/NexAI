@@ -89,7 +89,7 @@ function ClinicianDashboard() {
 
     setPatients(updatedPatients);
     setLoading(false);
-  },[]);
+  }, []);
 
   // Auto-refresh every 30 seconds
   useEffect(() => {
